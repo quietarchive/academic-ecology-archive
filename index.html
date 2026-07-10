@@ -1,74 +1,560 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-CN">
+
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>記憶錄 · 學術公共記錄</title>
-<link rel="stylesheet" href="style.css">
-</head>
-<body>
-<div class="wrap">
+<title>记忆录 · Academic Ecology Archive</title>
 
-<header class="site">
-  <p class="site-name"><a href="index.html">記憶錄</a></p>
-  <p class="tagline">互聯網沒有記憶，所以我們替它記。有一分證據，說一分話。</p>
-  <nav class="site">
-    <a href="index.html">首頁</a>
-    <a href="criteria.html">收錄標準與更正政策</a>
-  </nav>
+<style>
+:root {
+    color-scheme: dark;
+    --bg: #0c182a;
+    --text: #f3ecd9;
+    --muted: #8fa0b8;
+    --line: rgba(137, 153, 178, 0.42);
+    --accent: #c72d62;
+    --accent-soft: rgba(199, 45, 98, 0.16);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    min-height: 100vh;
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 52px 42px 80px;
+    color: var(--text);
+    background:
+        radial-gradient(circle at 14% 12%, rgba(199, 45, 98, 0.18), transparent 26%),
+        radial-gradient(circle at 88% 4%, rgba(66, 110, 170, 0.20), transparent 28%),
+        linear-gradient(rgba(139, 153, 178, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(139, 153, 178, 0.025) 1px, transparent 1px),
+        var(--bg);
+    background-size: auto, auto, 40px 40px, 40px 40px, auto;
+    font-family:
+        "Inter",
+        "SF Pro Display",
+        "Noto Sans SC",
+        "PingFang SC",
+        "Microsoft YaHei",
+        sans-serif;
+    line-height: 1.75;
+}
+
+button,
+input,
+textarea {
+    font: inherit;
+}
+
+button {
+    color: inherit;
+}
+
+h1 {
+    margin: 0;
+    font-size: clamp(40px, 7vw, 88px);
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+h2 {
+    margin: 0;
+    font-size: clamp(22px, 2.7vw, 34px);
+    line-height: 1.55;
+    font-weight: 700;
+    letter-spacing: 0;
+}
+
+p {
+    margin: 18px 0 0;
+    color: rgba(243, 236, 217, 0.82);
+    font-size: 17px;
+}
+
+a {
+    color: #f06292;
+    text-decoration: none;
+    word-break: break-all;
+    border-bottom: 1px solid rgba(240, 98, 146, 0.38);
+    transition: color 160ms ease, border-color 160ms ease;
+}
+
+a:hover {
+    color: #ff9fbd;
+    border-color: #ff9fbd;
+}
+
+.subtitle {
+    max-width: 620px;
+    margin: 18px 0 0;
+    color: var(--muted);
+    font-size: 17px;
+    letter-spacing: 0;
+}
+
+.site-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 32px;
+    margin-bottom: 58px;
+}
+
+.add-memory-button,
+.submit-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding: 10px 18px;
+    border: 1px solid rgba(199, 45, 98, 0.62);
+    border-radius: 6px;
+    background: rgba(199, 45, 98, 0.12);
+    color: #f17aa3;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.add-memory-button:hover,
+.submit-button:hover {
+    border-color: #f17aa3;
+    background: rgba(199, 45, 98, 0.22);
+}
+
+.add-memory-button:active,
+.submit-button:active {
+    transform: translateY(1px);
+}
+
+.button-icon {
+    margin-right: 8px;
+    font-size: 24px;
+    line-height: 1;
+    font-weight: 400;
+}
+
+.archive {
+    position: relative;
+}
+
+.entry {
+    position: relative;
+    display: grid;
+    grid-template-columns: 285px minmax(0, 1fr);
+    gap: 30px;
+    margin-bottom: 66px;
+}
+
+.entry::before {
+    content: "";
+    position: absolute;
+    left: 12px;
+    top: 50px;
+    bottom: -70px;
+    width: 4px;
+    background: linear-gradient(var(--line), rgba(137, 153, 178, 0.14));
+}
+
+.entry::after {
+    content: "";
+    position: absolute;
+    left: 3px;
+    top: 36px;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow:
+        0 0 0 10px rgba(199, 45, 98, 0.08),
+        0 0 28px rgba(199, 45, 98, 0.72);
+}
+
+.time-col {
+    position: relative;
+    min-height: 110px;
+    padding-left: 52px;
+}
+
+.year {
+    margin: -8px 0 40px -8px;
+    color: rgba(199, 45, 98, 0.58);
+    font-size: clamp(70px, 9vw, 104px);
+    line-height: 0.92;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.date {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 180px;
+    min-height: 74px;
+    padding: 14px 22px;
+    border: 1px solid rgba(199, 45, 98, 0.56);
+    border-radius: 22px;
+    color: var(--accent);
+    background: rgba(20, 29, 49, 0.72);
+    box-shadow:
+        0 22px 42px rgba(199, 45, 98, 0.20),
+        inset 0 -8px 0 rgba(199, 45, 98, 0.08),
+        0 8px 0 rgba(4, 9, 18, 0.24);
+    font-size: clamp(28px, 3.5vw, 38px);
+    line-height: 1;
+    font-weight: 800;
+    letter-spacing: 0;
+}
+
+.content {
+    max-width: 780px;
+    padding-top: 156px;
+}
+
+.entry-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 22px;
+}
+
+.label {
+    display: inline-flex;
+    align-items: center;
+    min-height: 38px;
+    padding: 6px 16px;
+    border: 1px solid rgba(199, 45, 98, 0.42);
+    border-radius: 999px;
+    color: var(--accent);
+    background: var(--accent-soft);
+    font-weight: 700;
+}
+
+.memory-dialog {
+    width: min(620px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    padding: 0;
+    border: 1px solid rgba(143, 160, 184, 0.34);
+    border-radius: 8px;
+    color: var(--text);
+    background: #111f34;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+}
+
+.memory-dialog::backdrop {
+    background: rgba(3, 8, 16, 0.76);
+    backdrop-filter: blur(5px);
+}
+
+.memory-form {
+    padding: 26px;
+}
+
+.dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 22px;
+}
+
+.dialog-header h2 {
+    font-size: 24px;
+    line-height: 1.3;
+}
+
+.close-button {
+    display: grid;
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    color: var(--muted);
+    background: transparent;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.close-button:hover {
+    color: var(--text);
+    background: rgba(143, 160, 184, 0.12);
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.field {
+    display: grid;
+    gap: 7px;
+}
+
+.field-wide {
+    grid-column: 1 / -1;
+}
+
+.field label {
+    color: rgba(243, 236, 217, 0.82);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.field input,
+.field textarea {
+    width: 100%;
+    border: 1px solid rgba(143, 160, 184, 0.30);
+    border-radius: 6px;
+    outline: 0;
+    color: var(--text);
+    background: rgba(6, 14, 26, 0.62);
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.field input {
+    height: 46px;
+    padding: 0 13px;
+}
+
+.field textarea {
+    min-height: 100px;
+    padding: 11px 13px;
+    resize: vertical;
+}
+
+.field input:focus,
+.field textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(199, 45, 98, 0.14);
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 22px;
+}
+
+.submit-button {
+    color: var(--text);
+    background: var(--accent);
+}
+
+.submit-button:hover {
+    background: #dc3b72;
+}
+
+@media (max-width: 780px) {
+    body {
+        padding: 34px 20px 60px;
+    }
+
+    .subtitle {
+        margin-bottom: 0;
+    }
+
+    .site-header {
+        align-items: flex-start;
+        flex-direction: column;
+        margin-bottom: 34px;
+    }
+
+    .entry {
+        grid-template-columns: 1fr;
+        gap: 22px;
+        margin-bottom: 48px;
+    }
+
+    .entry::before {
+        left: 10px;
+        top: 118px;
+    }
+
+    .entry::after {
+        top: 104px;
+    }
+
+    .time-col {
+        padding-left: 42px;
+    }
+
+    .year {
+        margin-bottom: 24px;
+        font-size: 68px;
+    }
+
+    .date {
+        min-width: 148px;
+        min-height: 58px;
+        font-size: 27px;
+        border-radius: 18px;
+    }
+
+    .content {
+        max-width: none;
+        padding: 0 0 0 42px;
+    }
+
+    .memory-form {
+        padding: 20px;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+<header class="site-header">
+    <div>
+        <h1>记忆录</h1>
+
+        <p class="subtitle">
+        Academic Ecology Archive<br>
+        互联网没有记忆，所以我们替它记。
+        </p>
+    </div>
+
+    <button class="add-memory-button" id="openMemoryForm" type="button">
+        <span class="button-icon" aria-hidden="true">+</span>
+        添加记忆
+    </button>
 </header>
 
-<main>
+<main class="archive">
+    <article class="entry">
+        <div class="time-col">
+            <div class="year">2026</div>
+            <div class="date">7月10日</div>
+        </div>
 
-<h2>本站是什麼</h2>
-<p>本站是一份公共記錄：保存學術界公開發表的爭議言論與經官方認定的學術不端案例，附原文鏈接與第三方存檔，防止記錄隨時間消失或被悄悄刪改。</p>
-<p>本站只做三件事：<strong>記錄事實、保存出處、標明觀點</strong>。事實與評論嚴格分開；每一條記錄都附可查證的來源。詳見<a href="criteria.html">收錄標準與更正政策</a>。</p>
+        <div class="content">
+            <h2>王学典《中华读书报》刊文引发争议</h2>
 
-<h2>欄目一 · 爭議言論記錄</h2>
-<p class="meta-line">收錄公開發表、引發廣泛公共討論的言論。記錄言論本身的出處與存檔、輿論反應的概況。本欄目不對當事人作任何事實性指控。</p>
+            <div class="entry-meta">
+                <span class="label">公开文章</span>
+                <span class="label">讨论记录</span>
+            </div>
 
-<!-- 新條目往這裡加：複製下面整個 entry-card，改鏈接和文字 -->
-<div class="entry-card">
+            <p>
+                来源：
+                <a href="https://mp.weixin.qq.com/s/6cekk0UkHET0pavmQn8Xew">《中华读书报》原文</a>
+            </p>
 
-  <div>
-    <span class="stamp">
-      爭議言論記錄
-    </span>
-    <span class="rec-no">
-      REC-2026-001
-    </span>
-  </div>
+            <p>
+                第三方存档：
+                <a href="https://archive.ph/EGGnH">https://archive.ph/EGGnH</a>
+            </p>
 
-  <h3>
-    <a href="entries/rec-2026-07-10.html">
-      王學典《中華讀書報》刊文引發爭議（2026年7月）
-    </a>
-  </h3>
-
-  <p class="meta-line">
-    2026-07-10 建檔 · 原文已第三方存檔
-  </p>
-
-  <a class="button"
-     href="entries/rec-2026-07-10.html">
-     查看記錄 →
-  </a>
-
-</div>
-
-<h2>欄目二 · 學術不端案例</h2>
-<p class="meta-line">僅收錄經期刊撤稿聲明、所在機構調查結論或政府主管部門處分公告等官方文件認定的案例。每條必附官方文件鏈接與存檔。</p>
-
-<div class="entry-card">
-  <p class="meta-line">暫無收錄。本欄目寧缺毋濫。</p>
-</div>
-
+            <p>
+                备注：公开发表文章及相关讨论记录。
+            </p>
+        </div>
+    </article>
 </main>
 
-<footer class="site">
-  <p>記憶錄 · 事實有出處，評論有署名。發現錯誤請來信更正：<span class="todo">【你的聯繫郵箱】</span></p>
-</footer>
+<dialog class="memory-dialog" id="memoryDialog">
+    <form class="memory-form" id="memoryForm">
+        <div class="dialog-header">
+            <h2>添加一条记忆</h2>
+            <button class="close-button" id="closeMemoryForm" type="button" aria-label="关闭">&times;</button>
+        </div>
 
-</div>
+        <div class="form-grid">
+            <div class="field field-wide">
+                <label for="memoryTitle">事件标题</label>
+                <input id="memoryTitle" name="title" type="text" maxlength="120" required>
+            </div>
+
+            <div class="field">
+                <label for="memoryDate">事件日期</label>
+                <input id="memoryDate" name="date" type="date" required>
+            </div>
+
+            <div class="field field-wide">
+                <label for="sourceUrl">来源链接</label>
+                <input id="sourceUrl" name="source" type="url" inputmode="url" placeholder="https://" required>
+            </div>
+
+            <div class="field field-wide">
+                <label for="archiveUrl">第三方存档链接</label>
+                <input id="archiveUrl" name="archive" type="url" inputmode="url" placeholder="https://archive.ph/..." required>
+            </div>
+
+            <div class="field field-wide">
+                <label for="memoryNote">补充说明（选填）</label>
+                <textarea id="memoryNote" name="note" maxlength="1000"></textarea>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button class="submit-button" type="submit">提交到 GitHub</button>
+        </div>
+    </form>
+</dialog>
+
+<script>
+const repository = "quietarchive/academic-ecology-archive";
+const dialog = document.getElementById("memoryDialog");
+const form = document.getElementById("memoryForm");
+const dateInput = document.getElementById("memoryDate");
+
+document.getElementById("openMemoryForm").addEventListener("click", () => {
+    if (!dateInput.value) {
+        dateInput.value = new Date().toLocaleDateString("en-CA");
+    }
+    dialog.showModal();
+});
+
+document.getElementById("closeMemoryForm").addEventListener("click", () => dialog.close());
+
+dialog.addEventListener("click", (event) => {
+    if (event.target === dialog) {
+        dialog.close();
+    }
+});
+
+form.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const data = new FormData(form);
+    const title = data.get("title").trim();
+    const date = data.get("date");
+    const source = data.get("source").trim();
+    const archive = data.get("archive").trim();
+    const note = data.get("note").trim() || "无";
+    const issueTitle = `[记忆提交] ${date} ${title}`;
+    const issueBody = [
+        "## 事件信息",
+        "",
+        `- 日期：${date}`,
+        `- 标题：${title}`,
+        `- 来源链接：${source}`,
+        `- 第三方存档：${archive}`,
+        "",
+        "## 补充说明",
+        "",
+        note
+    ].join("\n");
+    const issueUrl = new URL(`https://github.com/${repository}/issues/new`);
+
+    issueUrl.searchParams.set("title", issueTitle);
+    issueUrl.searchParams.set("body", issueBody);
+    window.open(issueUrl.toString(), "_blank", "noopener,noreferrer");
+    dialog.close();
+});
+</script>
 </body>
+
 </html>
