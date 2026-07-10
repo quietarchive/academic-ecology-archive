@@ -338,6 +338,48 @@ a:hover {
     box-shadow: 0 0 0 3px rgba(199, 45, 98, 0.14);
 }
 
+.archive-tools {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.archive-tools input {
+    min-width: 0;
+    flex: 1;
+}
+
+.archive-button {
+    flex: 0 0 auto;
+    min-height: 46px;
+    padding: 0 15px;
+    border: 1px solid rgba(143, 160, 184, 0.42);
+    border-radius: 6px;
+    color: var(--text);
+    background: rgba(143, 160, 184, 0.10);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: border-color 160ms ease, background 160ms ease;
+}
+
+.archive-button:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: rgba(199, 45, 98, 0.16);
+}
+
+.archive-button:disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.field-hint {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.55;
+}
+
 .form-actions {
     display: flex;
     justify-content: flex-end;
@@ -411,6 +453,11 @@ a:hover {
     .form-grid {
         grid-template-columns: 1fr;
     }
+
+    .archive-tools {
+        align-items: stretch;
+        flex-direction: column;
+    }
 }
 </style>
 </head>
@@ -422,7 +469,7 @@ a:hover {
 
         <p class="subtitle">
         Academic Ecology Archive<br>
-        互联网有记忆。
+        互联网没有记忆，所以我们替它记。
         </p>
     </div>
 
@@ -484,12 +531,16 @@ a:hover {
 
             <div class="field field-wide">
                 <label for="sourceUrl">来源链接</label>
-                <input id="sourceUrl" name="source" type="url" inputmode="url" placeholder="https://" required>
+                <div class="archive-tools">
+                    <input id="sourceUrl" name="source" type="url" inputmode="url" placeholder="https://" required>
+                    <button class="archive-button" id="createArchive" type="button" disabled>生成存档</button>
+                </div>
+                <p class="field-hint">将在新窗口打开 Wayback Machine；保存完成后，请复制生成的永久链接。</p>
             </div>
 
             <div class="field field-wide">
                 <label for="archiveUrl">第三方存档链接</label>
-                <input id="archiveUrl" name="archive" type="url" inputmode="url" placeholder="https://archive.ph/..." required>
+                <input id="archiveUrl" name="archive" type="url" inputmode="url" placeholder="https://web.archive.org/web/..." required>
             </div>
 
             <div class="field field-wide">
@@ -509,15 +560,31 @@ const repository = "quietarchive/academic-ecology-archive";
 const dialog = document.getElementById("memoryDialog");
 const form = document.getElementById("memoryForm");
 const dateInput = document.getElementById("memoryDate");
+const sourceInput = document.getElementById("sourceUrl");
+const createArchiveButton = document.getElementById("createArchive");
 
 document.getElementById("openMemoryForm").addEventListener("click", () => {
     if (!dateInput.value) {
         dateInput.value = new Date().toLocaleDateString("en-CA");
     }
+    createArchiveButton.disabled = !sourceInput.validity.valid;
     dialog.showModal();
 });
 
 document.getElementById("closeMemoryForm").addEventListener("click", () => dialog.close());
+
+sourceInput.addEventListener("input", () => {
+    createArchiveButton.disabled = !sourceInput.validity.valid;
+});
+
+createArchiveButton.addEventListener("click", () => {
+    if (!sourceInput.reportValidity()) {
+        return;
+    }
+
+    const saveUrl = `https://web.archive.org/save/${sourceInput.value.trim()}`;
+    window.open(saveUrl, "_blank", "noopener,noreferrer");
+});
 
 dialog.addEventListener("click", (event) => {
     if (event.target === dialog) {
