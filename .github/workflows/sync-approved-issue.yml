@@ -1,0 +1,138 @@
+name: Sync approved memory
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  sync:
+    if: github.event.label.name == 'approved'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync issue into entries.json
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'data/entries.json';
+            const issue = context.payload.issue;
+            const body = issue.body || '';
+
+            function field(patterns) {
+              for (const pattern of patterns) {
+                const match = body.match(pattern);
+                if (match?.[1]) return match[1].trim();
+              }
+              return '';
+            }
+
+            const date = field([
+              /[-*]\s*日期[：:]\s*(.+)/,
+              /###\s*日期\s*\n+([^\n#]+)/
+            ]);
+            const title = field([
+              /[-*]\s*标题[：:]\s*(.+)/,
+              /###\s*原文标题\s*\n+([^\n#]+)/
+            ]) || issue.title.replace(/^\[记忆提交\]\s*/, '').replace(/^\d{4}-\d{2}-\d{2}\s*/, '').trim();
+            const source = field([
+              /[-*]\s*来源链接[：:]\s*(.+)/,
+              /###\s*原文链接\s*\n+([^\n#]+)/
+            ]);
+            const archive = field([
+              /[-*]\s*第三方存档[：:]\s*(.+)/,
+              /###\s*第三方存档\s*\n+([^\n#]+)/
+            ]);
+            const labelsRaw = field([
+              /[-*]\s*标签[：:]\s*(.+)/
+            ]);
+            let note = field([
+              /##\s*补充说明\s*\n+([\s\S]*?)(?=\n##\s|$)/,
+              /###\s*说明\s*\n+([\s\S]*?)(?=\n###\s|$)/
+            ]).replace(/\n+$/, '');
+
+            if (!note || note === '无') note = '';
+
+            if (!date || !title || !source || !archive) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: '同步失败：Issue 中缺少日期、标题、来源链接或第三方存档。请按模板补全后重新添加 `approved` 标签。'
+              });
+              core.setFailed('Missing required fields in issue body');
+              return;
+            }
+
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: '同步失败：日期格式应为 `YYYY-MM-DD`。'
+              });
+              core.setFailed('Invalid date format');
+              return;
+            }
+
+            const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const existing = data.entries.findIndex((entry) => entry.issue === issue.number);
+            const entry = {
+              issue: issue.number,
+              date,
+              title,
+              source: source.replace(/[<>]/g, ''),
+              archive: archive.replace(/[<>]/g, ''),
+              note,
+              labels: labelsRaw
+                ? labelsRaw.split(/[,，]/).map((item) => item.trim()).filter(Boolean)
+                : ['公开资料']
+            };
+
+            if (existing >= 0) {
+              data.entries[existing] = entry;
+            } else {
+              data.entries.push(entry);
+            }
+
+            data.entries.sort((a, b) => {
+              if (a.date === b.date) return (b.issue || 0) - (a.issue || 0);
+              return a.date < b.date ? 1 : -1;
+            });
+
+            fs.writeFileSync(path, JSON.stringify(data, null, 2) + '\n');
+
+            await exec.exec('git', ['config', 'user.name', 'github-actions[bot]']);
+            await exec.exec('git', ['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com']);
+            await exec.exec('git', ['add', path]);
+
+            const status = await exec.getExecOutput('git', ['status', '--porcelain', path]);
+            if (!status.stdout.trim()) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: '档案数据未变化（可能已同步过）。'
+              });
+              return;
+            }
+
+            await exec.exec('git', [
+              'commit',
+              '-m',
+              `Add archive entry from issue #${issue.number}`
+            ]);
+            await exec.exec('git', ['push']);
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+              body: '已同步到档案站点。GitHub Pages 通常会在一两分钟内更新。'
+            });

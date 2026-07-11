@@ -1,13 +1,10 @@
 name: 记忆提交
-
 description: 提交一条公开资料档案
-
 title: "[记忆提交] "
-
 body:
 
   - type: input
-    id: event_date
+    id: date
     attributes:
       label: 日期
       description: 事件日期或记录日期
@@ -17,7 +14,7 @@ body:
 
 
   - type: input
-    id: source_title
+    id: title
     attributes:
       label: 原文标题
       description: 请填写文章或事件原始标题
@@ -27,7 +24,7 @@ body:
 
 
   - type: input
-    id: source_url
+    id: source
     attributes:
       label: 原文链接
       description: 原始来源网址
@@ -37,11 +34,13 @@ body:
 
 
   - type: input
-    id: archive_url
+    id: archive
     attributes:
       label: 第三方存档
-      description: archive.ph 等存档地址
+      description: archive.ph 存档地址（微信文章请用 archive.ph，不要用互联网档案馆）
       placeholder: https://archive.ph/
+    validations:
+      required: true
 
 
   - type: textarea
