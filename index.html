@@ -65,8 +65,8 @@ h1 {
 
 h2 {
     margin: 0;
-    font-size: clamp(22px, 2.7vw, 34px);
-    line-height: 1.55;
+    font-size: clamp(17px, 1.9vw, 22px);
+    line-height: 1.45;
     letter-spacing: 0;
 }
 
@@ -553,7 +553,7 @@ a:hover {
                     <input id="sourceUrl" name="source" type="url" inputmode="url" placeholder="https://" required>
                     <button class="archive-button" id="createArchive" type="button" disabled>生成存档</button>
                 </div>
-                <p class="field-hint">将在新窗口打开 archive.ph；保存完成后，把生成的永久链接粘贴到下方。</p>
+                <p class="field-hint">将在新窗口打开互联网档案馆（Wayback Machine）；保存完成后，把生成的永久链接粘贴到下方。</p>
             </div>
 
             <div class="field field-wide">
@@ -572,7 +572,7 @@ a:hover {
 
             <div class="field field-wide">
                 <label for="archiveUrl">第三方存档链接</label>
-                <input id="archiveUrl" name="archive" type="url" inputmode="url" placeholder="https://archive.ph/..." required>
+                <input id="archiveUrl" name="archive" type="url" inputmode="url" placeholder="https://web.archive.org/web/..." required>
             </div>
 
             <div class="field field-wide">
@@ -772,7 +772,7 @@ createArchiveButton.addEventListener("click", () => {
         return;
     }
 
-    const saveUrl = `https://archive.ph/?run=1&url=${encodeURIComponent(sourceInput.value.trim())}`;
+    const saveUrl = `https://web.archive.org/save/${sourceInput.value.trim()}`;
     window.open(saveUrl, "_blank", "noopener,noreferrer");
 });
 

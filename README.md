@@ -10,4 +10,4 @@
 
 首次使用前，请在仓库 **Issues → Labels** 中新建标签 `approved`。
 
-存档请优先使用 [archive.ph](https://archive.ph/)（微信文章通常无法被互联网档案馆保存）。
+存档请优先使用 [互联网档案馆 Wayback Machine](https://web.archive.org/)。
