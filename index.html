@@ -15,6 +15,9 @@
     --line: rgba(137, 153, 178, 0.42);
     --accent: #c72d62;
     --accent-soft: rgba(199, 45, 98, 0.16);
+    --date: #f0a84a;
+    --date-soft: rgba(240, 168, 74, 0.16);
+    --font: "PingFang SC", "PingFangSC-Semibold", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
 * {
@@ -34,20 +37,21 @@ body {
         linear-gradient(90deg, rgba(139, 153, 178, 0.025) 1px, transparent 1px),
         var(--bg);
     background-size: auto, auto, 40px 40px, 40px 40px, auto;
-    font-family:
-        "Inter",
-        "SF Pro Display",
-        "Noto Sans SC",
-        "PingFang SC",
-        "Microsoft YaHei",
-        sans-serif;
+    font-family: var(--font);
+    font-weight: 600;
     line-height: 1.75;
 }
 
 button,
 input,
-textarea {
-    font: inherit;
+textarea,
+h1,
+h2,
+.label,
+.date,
+.year {
+    font-family: var(--font);
+    font-weight: 600;
 }
 
 button {
@@ -58,7 +62,6 @@ h1 {
     margin: 0;
     font-size: clamp(32px, 4vw, 56px);
     line-height: 1;
-    font-weight: 800;
     letter-spacing: 0;
 }
 
@@ -66,7 +69,6 @@ h2 {
     margin: 0;
     font-size: clamp(22px, 2.7vw, 34px);
     line-height: 1.55;
-    font-weight: 700;
     letter-spacing: 0;
 }
 
@@ -116,7 +118,6 @@ a:hover {
     border-radius: 6px;
     background: rgba(199, 45, 98, 0.12);
     color: #f17aa3;
-    font-weight: 700;
     cursor: pointer;
     transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
 }
@@ -175,6 +176,14 @@ a:hover {
         0 0 28px rgba(199, 45, 98, 0.72);
 }
 
+.entry.entry-continued::before {
+    top: 18px;
+}
+
+.entry.entry-continued::after {
+    top: 8px;
+}
+
 .time-col {
     position: relative;
     min-height: 110px;
@@ -186,7 +195,6 @@ a:hover {
     color: rgba(199, 45, 98, 0.58);
     font-size: clamp(70px, 9vw, 104px);
     line-height: 0.92;
-    font-weight: 800;
     letter-spacing: 0;
 }
 
@@ -194,26 +202,34 @@ a:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 180px;
-    min-height: 74px;
-    padding: 14px 22px;
-    border: 1px solid rgba(199, 45, 98, 0.56);
-    border-radius: 22px;
-    color: var(--accent);
+    min-width: 112px;
+    min-height: 42px;
+    padding: 8px 14px;
+    border: 1px solid rgba(240, 168, 74, 0.62);
+    border-radius: 14px;
+    color: var(--date);
     background: rgba(20, 29, 49, 0.72);
     box-shadow:
-        0 22px 42px rgba(199, 45, 98, 0.20),
-        inset 0 -8px 0 rgba(199, 45, 98, 0.08),
-        0 8px 0 rgba(4, 9, 18, 0.24);
-    font-size: clamp(28px, 3.5vw, 38px);
+        0 14px 28px rgba(240, 168, 74, 0.14),
+        inset 0 -4px 0 rgba(240, 168, 74, 0.08),
+        0 4px 0 rgba(4, 9, 18, 0.24);
+    font-size: clamp(15px, 1.6vw, 18px);
     line-height: 1;
-    font-weight: 800;
     letter-spacing: 0;
 }
 
 .content {
     max-width: 780px;
     padding-top: 156px;
+}
+
+.entry.entry-continued .content {
+    padding-top: 4px;
+}
+
+.entry.entry-continued .time-col {
+    min-height: 48px;
+    padding-top: 4px;
 }
 
 .entry-meta {
@@ -232,7 +248,6 @@ a:hover {
     border-radius: 999px;
     color: var(--accent);
     background: var(--accent-soft);
-    font-weight: 700;
 }
 
 .memory-dialog {
@@ -358,7 +373,6 @@ a:hover {
     color: var(--text);
     background: rgba(143, 160, 184, 0.10);
     font-size: 14px;
-    font-weight: 700;
     cursor: pointer;
     transition: border-color 160ms ease, background 160ms ease;
 }
@@ -405,7 +419,6 @@ a:hover {
     color: var(--text);
     background: rgba(143, 160, 184, 0.10);
     font-size: 14px;
-    font-weight: 700;
     cursor: pointer;
     transition: border-color 160ms ease, background 160ms ease;
 }
@@ -476,6 +489,14 @@ a:hover {
         top: 104px;
     }
 
+    .entry.entry-continued::before {
+        top: 28px;
+    }
+
+    .entry.entry-continued::after {
+        top: 14px;
+    }
+
     .time-col {
         padding-left: 42px;
     }
@@ -486,14 +507,18 @@ a:hover {
     }
 
     .date {
-        min-width: 148px;
-        min-height: 58px;
-        font-size: 27px;
-        border-radius: 18px;
+        min-width: 96px;
+        min-height: 36px;
+        font-size: 15px;
+        border-radius: 12px;
     }
 
     .content {
         max-width: none;
+        padding: 0 0 0 42px;
+    }
+
+    .entry.entry-continued .content {
         padding: 0 0 0 42px;
     }
 
@@ -619,8 +644,11 @@ function renderEntries(entries) {
         return;
     }
 
+    let previousYear = "";
     archiveRoot.innerHTML = entries.map((entry) => {
         const { year, date } = formatDateParts(entry.date);
+        const showYear = year !== previousYear;
+        previousYear = year;
         const labels = (entry.labels || []).map(
             (label) => `<span class="label">${escapeHtml(label)}</span>`
         ).join("");
@@ -629,9 +657,9 @@ function renderEntries(entries) {
             : "";
 
         return `
-            <article class="entry">
+            <article class="entry${showYear ? "" : " entry-continued"}">
                 <div class="time-col">
-                    <div class="year">${escapeHtml(year)}</div>
+                    ${showYear ? `<div class="year">${escapeHtml(year)}</div>` : ""}
                     <div class="date">${escapeHtml(date)}</div>
                 </div>
                 <div class="content">
