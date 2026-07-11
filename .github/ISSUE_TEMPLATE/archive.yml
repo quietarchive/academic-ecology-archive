@@ -1,1 +1,49 @@
+name: 记忆提交
+description: 提交一条公开资料档案
+title: "[记忆提交] "
+body:
 
+  - type: input
+    id: date
+    attributes:
+      label: 日期
+      description: 事件日期或记录日期
+      placeholder: 2026-07-11
+    validations:
+      required: true
+
+
+  - type: input
+    id: title
+    attributes:
+      label: 原文标题
+      description: 请填写文章或事件原始标题
+      placeholder: 王学典《XXXX》
+    validations:
+      required: true
+
+
+  - type: input
+    id: source
+    attributes:
+      label: 原文链接
+      description: 原始来源网址
+      placeholder: https://
+    validations:
+      required: true
+
+
+  - type: input
+    id: archive
+    attributes:
+      label: 第三方存档
+      description: archive.ph 等存档地址
+      placeholder: https://archive.ph/
+
+
+  - type: textarea
+    id: description
+    attributes:
+      label: 说明
+      description: 简要说明事件背景、讨论情况等
+      placeholder: 请填写说明
