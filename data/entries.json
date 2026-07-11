@@ -1,13 +1,27 @@
 {
   "entries": [
     {
+      "issue": 2,
+      "date": "2026-07-11",
+      "title": "范曾悼妻、陈来怀友、学典忆旧，笑谈今日学界八卦",
+      "source": "https://mp.weixin.qq.com/s/67Rf3PMi_EcfErbbVDfsaQ",
+      "archive": "https://archive.ph/XJadM",
+      "note": "尚未404",
+      "labels": [
+        "公开资料"
+      ]
+    },
+    {
       "issue": null,
       "date": "2026-07-10",
       "title": "王学典《中华读书报》刊文引发争议",
       "source": "https://mp.weixin.qq.com/s/6cekk0UkHET0pavmQn8Xew",
       "archive": "https://archive.ph/EGGnH",
       "note": "公开发表文章及相关讨论记录。",
-      "labels": ["公开文章", "讨论记录"]
+      "labels": [
+        "公开文章",
+        "讨论记录"
+      ]
     }
   ]
 }
