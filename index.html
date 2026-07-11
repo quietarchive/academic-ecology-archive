@@ -46,7 +46,6 @@ input,
 textarea,
 h1,
 h2,
-.label,
 .date,
 .year {
     font-family: var(--font);
@@ -229,24 +228,6 @@ a:hover {
 .entry.entry-continued .time-col {
     min-height: 48px;
     padding-top: 4px;
-}
-
-.entry-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 22px;
-}
-
-.label {
-    display: inline-flex;
-    align-items: center;
-    min-height: 38px;
-    padding: 6px 16px;
-    border: 1px solid rgba(240, 168, 74, 0.42);
-    border-radius: 999px;
-    color: var(--accent);
-    background: var(--accent-soft);
 }
 
 .memory-dialog {
@@ -648,9 +629,6 @@ function renderEntries(entries) {
         const { year, date } = formatDateParts(entry.date);
         const showYear = year !== previousYear;
         previousYear = year;
-        const labels = (entry.labels || []).map(
-            (label) => `<span class="label">${escapeHtml(label)}</span>`
-        ).join("");
         const note = entry.note
             ? `<p>备注：${escapeHtml(entry.note)}</p>`
             : "";
@@ -663,7 +641,6 @@ function renderEntries(entries) {
                 </div>
                 <div class="content">
                     <h2>${escapeHtml(entry.title)}</h2>
-                    ${labels ? `<div class="entry-meta">${labels}</div>` : ""}
                     <p>
                         来源：
                         <a href="${escapeHtml(entry.source)}" rel="noopener noreferrer" target="_blank">${escapeHtml(entry.source)}</a>
