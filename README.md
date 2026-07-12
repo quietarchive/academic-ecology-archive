@@ -12,16 +12,10 @@
 
 存档优先使用 [互联网档案馆 Wayback Machine](https://web.archive.org/)；微信文章常被拦截，请改用 [archive.ph](https://archive.ph/)。
 
-## 相关讨论截图
+## 讨论截图
 
-1. 把截图放进 `media/issue-<编号>/`
-2. 在 `data/entries.json` 对应条目里加 `discussion` 数组，例如：
+1. 打开对应条目的 GitHub Issue
+2. 在评论里直接粘贴/上传截图
+3. 主页该条目旁点「讨论截图」即可查看
 
-```json
-"discussion": [
-  "media/issue-4/01.png",
-  "media/issue-4/02.png"
-]
-```
-
-主页会显示「相关讨论」按钮，点击可查看截图。
+后台也会自动把截图同步进仓库，方便长期保存。

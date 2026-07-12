@@ -1,0 +1,117 @@
+name: Sync discussion screenshots
+
+on:
+  issue_comment:
+    types: [created, edited]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Issue number to resync discussion screenshots for
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  issues: read
+
+jobs:
+  sync:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.state != 'closed' && github.event.comment.user.type != 'Bot')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Sync screenshots from issue comments
+        uses: actions/github-script@v7
+        env:
+          ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number }}
+        with:
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const { execFileSync } = require('child_process');
+
+            const issueNumber = Number(process.env.ISSUE_NUMBER);
+            if (!Number.isInteger(issueNumber) || issueNumber <= 0) {
+              core.setFailed(`Invalid issue number: ${process.env.ISSUE_NUMBER}`);
+              return;
+            }
+
+            const entriesPath = 'data/entries.json';
+            const data = JSON.parse(fs.readFileSync(entriesPath, 'utf8'));
+            const entryIndex = data.entries.findIndex((entry) => entry.issue === issueNumber);
+
+            if (entryIndex < 0) {
+              core.info(`Issue #${issueNumber} is not in entries.json yet; skip screenshot sync.`);
+              return;
+            }
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              per_page: 100
+            });
+
+            function extractImageUrls(body) {
+              const urls = [];
+              const patterns = [
+                /!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/g,
+                /<img[^>]+src=["'](https?:\/\/[^"']+)["']/gi
+              ];
+              for (const pattern of patterns) {
+                for (const match of String(body || '').matchAll(pattern)) {
+                  urls.push(match[1]);
+                }
+              }
+              return [...new Set(urls)];
+            }
+
+            const imageUrls = comments
+              .filter((comment) => comment.user?.type !== 'Bot')
+              .flatMap((comment) => extractImageUrls(comment.body));
+
+            const mediaDir = path.join('media', `issue-${issueNumber}`);
+            fs.rmSync(mediaDir, { recursive: true, force: true });
+
+            if (!imageUrls.length) {
+              delete data.entries[entryIndex].discussion;
+              fs.writeFileSync(entriesPath, JSON.stringify(data, null, 2) + '\n');
+            } else {
+              fs.mkdirSync(mediaDir, { recursive: true });
+              const saved = [];
+
+              for (let i = 0; i < imageUrls.length; i += 1) {
+                const url = imageUrls[i];
+                const extensionMatch = url.match(/\.(png|jpe?g|webp|gif)(?:[?#]|$)/i);
+                const extension = extensionMatch ? extensionMatch[1].toLowerCase().replace('jpeg', 'jpg') : 'png';
+                const filename = `${String(i + 1).padStart(2, '0')}.${extension}`;
+                const output = path.join(mediaDir, filename);
+
+                execFileSync('curl', ['-fsSL', '-o', output, url], { stdio: 'inherit' });
+                saved.push(output.replace(/\\/g, '/'));
+              }
+
+              data.entries[entryIndex].discussion = saved;
+              fs.writeFileSync(entriesPath, JSON.stringify(data, null, 2) + '\n');
+            }
+
+            await exec.exec('git', ['config', 'user.name', 'github-actions[bot]']);
+            await exec.exec('git', ['config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com']);
+            await exec.exec('git', ['add', entriesPath, 'media']);
+
+            const status = await exec.getExecOutput('git', ['status', '--porcelain']);
+            if (!status.stdout.trim()) {
+              core.info('No discussion screenshot changes to commit.');
+              return;
+            }
+
+            await exec.exec('git', [
+              'commit',
+              '-m',
+              `Sync discussion screenshots from issue #${issueNumber}`
+            ]);
+            await exec.exec('git', ['push']);
