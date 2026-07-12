@@ -37,8 +37,8 @@ body:
     id: archive
     attributes:
       label: 第三方存档
-      description: 互联网档案馆（Wayback Machine）存档地址
-      placeholder: https://web.archive.org/web/
+      description: 优先填 Wayback Machine；微信文章请用 archive.ph
+      placeholder: https://web.archive.org/web/... 或 https://archive.ph/
     validations:
       required: true
 

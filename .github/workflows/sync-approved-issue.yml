@@ -96,6 +96,10 @@ jobs:
             };
 
             if (existing >= 0) {
+              const previous = data.entries[existing];
+              if (Array.isArray(previous.discussion) && previous.discussion.length) {
+                entry.discussion = previous.discussion;
+              }
               data.entries[existing] = entry;
             } else {
               data.entries.push(entry);

@@ -230,6 +230,81 @@ a:hover {
     padding-top: 4px;
 }
 
+.entry-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.discussion-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 6px 14px;
+    border: 1px solid rgba(240, 168, 74, 0.55);
+    border-radius: 6px;
+    color: var(--accent);
+    background: rgba(240, 168, 74, 0.10);
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 160ms ease, border-color 160ms ease;
+}
+
+.discussion-button:hover {
+    border-color: var(--accent-strong);
+    background: rgba(240, 168, 74, 0.20);
+}
+
+.discussion-dialog {
+    width: min(760px, calc(100vw - 32px));
+    max-height: calc(100vh - 32px);
+    padding: 0;
+    border: 1px solid rgba(240, 168, 74, 0.34);
+    border-radius: 8px;
+    color: var(--text);
+    background: #111f34;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+}
+
+.discussion-dialog::backdrop {
+    background: rgba(3, 8, 16, 0.76);
+    backdrop-filter: blur(5px);
+}
+
+.discussion-panel {
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 32px);
+}
+
+.discussion-panel .dialog-header {
+    margin: 0;
+    padding: 20px 22px 14px;
+    border-bottom: 1px solid rgba(240, 168, 74, 0.18);
+}
+
+.discussion-gallery {
+    display: grid;
+    gap: 16px;
+    padding: 18px 22px 24px;
+    overflow: auto;
+}
+
+.discussion-gallery figure {
+    margin: 0;
+}
+
+.discussion-gallery img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border: 1px solid rgba(240, 168, 74, 0.28);
+    border-radius: 6px;
+    background: #0a1422;
+}
+
 .memory-dialog {
     width: min(620px, calc(100vw - 32px));
     max-height: calc(100vh - 32px);
@@ -334,18 +409,18 @@ a:hover {
 }
 
 .archive-tools {
-    display: flex;
-    align-items: center;
+    display: grid;
     gap: 10px;
 }
 
-.archive-tools input {
-    min-width: 0;
-    flex: 1;
+.archive-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .archive-button {
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     min-height: 46px;
     padding: 0 15px;
     border: 1px solid rgba(240, 168, 74, 0.42);
@@ -512,6 +587,9 @@ a:hover {
 
     .archive-tools {
         align-items: stretch;
+    }
+
+    .archive-actions {
         flex-direction: column;
     }
 }
@@ -539,6 +617,16 @@ a:hover {
     <p class="archive-loading">正在加载档案…</p>
 </main>
 
+<dialog class="discussion-dialog" id="discussionDialog">
+    <div class="discussion-panel">
+        <div class="dialog-header">
+            <h2 id="discussionTitle">相关讨论</h2>
+            <button class="close-button" id="closeDiscussion" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <div class="discussion-gallery" id="discussionGallery"></div>
+    </div>
+</dialog>
+
 <dialog class="memory-dialog" id="memoryDialog">
     <form class="memory-form" id="memoryForm">
         <div class="dialog-header">
@@ -551,9 +639,12 @@ a:hover {
                 <label for="sourceUrl">来源链接</label>
                 <div class="archive-tools">
                     <input id="sourceUrl" name="source" type="url" inputmode="url" placeholder="https://" required>
-                    <button class="archive-button" id="createArchive" type="button" disabled>生成存档</button>
+                    <div class="archive-actions">
+                        <button class="archive-button" id="createArchiveWayback" type="button" disabled>Wayback 存档</button>
+                        <button class="archive-button" id="createArchivePh" type="button" disabled>archive.ph 存档</button>
+                    </div>
                 </div>
-                <p class="field-hint">将在新窗口打开互联网档案馆（Wayback Machine）；保存完成后，把生成的永久链接粘贴到下方。</p>
+                <p class="field-hint" id="archiveHint">优先用互联网档案馆（Wayback）；微信文章常被拦截，请改用 archive.ph。保存后把可用的永久链接粘贴到下方。</p>
             </div>
 
             <div class="field field-wide">
@@ -572,7 +663,7 @@ a:hover {
 
             <div class="field field-wide">
                 <label for="archiveUrl">第三方存档链接</label>
-                <input id="archiveUrl" name="archive" type="url" inputmode="url" placeholder="https://web.archive.org/web/..." required>
+                <input id="archiveUrl" name="archive" type="url" inputmode="url" placeholder="https://web.archive.org/web/... 或 https://archive.ph/..." required>
             </div>
 
             <div class="field field-wide">
@@ -591,15 +682,24 @@ a:hover {
 const repository = "quietarchive/academic-ecology-archive";
 const archiveRoot = document.getElementById("archive");
 const dialog = document.getElementById("memoryDialog");
+const discussionDialog = document.getElementById("discussionDialog");
+const discussionTitle = document.getElementById("discussionTitle");
+const discussionGallery = document.getElementById("discussionGallery");
 const form = document.getElementById("memoryForm");
 const dateInput = document.getElementById("memoryDate");
 const sourceInput = document.getElementById("sourceUrl");
 const titleInput = document.getElementById("memoryTitle");
 const titleStatus = document.getElementById("titleStatus");
-const createArchiveButton = document.getElementById("createArchive");
+const createArchiveWaybackButton = document.getElementById("createArchiveWayback");
+const createArchivePhButton = document.getElementById("createArchivePh");
+const archiveHint = document.getElementById("archiveHint");
 const fetchTitleButton = document.getElementById("fetchTitle");
 
+const defaultArchiveHint = "优先用互联网档案馆（Wayback）；微信文章常被拦截，请改用 archive.ph。保存后把可用的永久链接粘贴到下方。";
+const wechatArchiveHint = "检测到微信链接：Wayback 通常只能存到验证页。请优先用 archive.ph 存档，再把永久链接粘贴到下方。";
+
 let titleFetchToken = 0;
+let entriesById = new Map();
 
 function escapeHtml(value) {
     return String(value)
@@ -618,19 +718,45 @@ function formatDateParts(isoDate) {
     };
 }
 
+function entryKey(entry, index) {
+    return entry.issue != null ? `issue-${entry.issue}` : `entry-${index}`;
+}
+
+function openDiscussion(entry) {
+    const images = Array.isArray(entry.discussion) ? entry.discussion : [];
+    if (!images.length) return;
+
+    discussionTitle.textContent = "相关讨论";
+    discussionGallery.innerHTML = images.map((src, index) => `
+        <figure>
+            <img src="./${escapeHtml(src)}" alt="相关讨论截图 ${index + 1}" loading="lazy">
+        </figure>
+    `).join("");
+    discussionDialog.showModal();
+}
+
 function renderEntries(entries) {
     if (!entries.length) {
         archiveRoot.innerHTML = '<p class="archive-empty">暂无档案条目。</p>';
         return;
     }
 
+    entriesById = new Map();
     let previousYear = "";
-    archiveRoot.innerHTML = entries.map((entry) => {
+    archiveRoot.innerHTML = entries.map((entry, index) => {
+        const key = entryKey(entry, index);
+        entriesById.set(key, entry);
         const { year, date } = formatDateParts(entry.date);
         const showYear = year !== previousYear;
         previousYear = year;
         const note = entry.note
             ? `<p>备注：${escapeHtml(entry.note)}</p>`
+            : "";
+        const hasDiscussion = Array.isArray(entry.discussion) && entry.discussion.length > 0;
+        const discussionAction = hasDiscussion
+            ? `<div class="entry-actions">
+                    <button class="discussion-button" type="button" data-entry-key="${escapeHtml(key)}">相关讨论</button>
+               </div>`
             : "";
 
         return `
@@ -650,11 +776,29 @@ function renderEntries(entries) {
                         <a href="${escapeHtml(entry.archive)}" rel="noopener noreferrer" target="_blank">${escapeHtml(entry.archive)}</a>
                     </p>
                     ${note}
+                    ${discussionAction}
                 </div>
             </article>
         `;
     }).join("");
 }
+
+archiveRoot.addEventListener("click", (event) => {
+    const button = event.target.closest(".discussion-button");
+    if (!button) return;
+    const entry = entriesById.get(button.dataset.entryKey);
+    if (entry) openDiscussion(entry);
+});
+
+document.getElementById("closeDiscussion").addEventListener("click", () => {
+    discussionDialog.close();
+});
+
+discussionDialog.addEventListener("click", (event) => {
+    if (event.target === discussionDialog) {
+        discussionDialog.close();
+    }
+});
 
 async function loadEntries() {
     try {
@@ -675,10 +819,22 @@ async function loadEntries() {
     }
 }
 
+function isWechatUrl(url) {
+    try {
+        return /(^|\.)mp\.weixin\.qq\.com$/i.test(new URL(url).hostname);
+    } catch {
+        return false;
+    }
+}
+
 function syncSourceButtons() {
     const valid = sourceInput.validity.valid && Boolean(sourceInput.value.trim());
-    createArchiveButton.disabled = !valid;
+    createArchiveWaybackButton.disabled = !valid;
+    createArchivePhButton.disabled = !valid;
     fetchTitleButton.disabled = !valid;
+    archiveHint.textContent = valid && isWechatUrl(sourceInput.value.trim())
+        ? wechatArchiveHint
+        : defaultArchiveHint;
 }
 
 function decodeHtmlEntities(text) {
@@ -767,12 +923,21 @@ fetchTitleButton.addEventListener("click", () => {
     fillTitleFromSource({ force: true });
 });
 
-createArchiveButton.addEventListener("click", () => {
+createArchiveWaybackButton.addEventListener("click", () => {
     if (!sourceInput.reportValidity()) {
         return;
     }
 
     const saveUrl = `https://web.archive.org/save/${sourceInput.value.trim()}`;
+    window.open(saveUrl, "_blank", "noopener,noreferrer");
+});
+
+createArchivePhButton.addEventListener("click", () => {
+    if (!sourceInput.reportValidity()) {
+        return;
+    }
+
+    const saveUrl = `https://archive.ph/?run=1&url=${encodeURIComponent(sourceInput.value.trim())}`;
     window.open(saveUrl, "_blank", "noopener,noreferrer");
 });
 
