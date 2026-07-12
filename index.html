@@ -745,27 +745,42 @@ function toImageSrc(pathOrUrl) {
     return `./${pathOrUrl.replace(/^\.\//, "")}`;
 }
 
-async function resolveDiscussionImages(entry) {
-    const local = Array.isArray(entry.discussion) ? entry.discussion.filter(Boolean) : [];
+function hasLocalDiscussion(entry) {
+    return Array.isArray(entry.discussion) && entry.discussion.length > 0;
+}
 
-    if (entry.issue != null) {
-        const response = await fetch(
-            `https://api.github.com/repos/${repository}/issues/${entry.issue}/comments?per_page=100`
-        );
-        if (!response.ok) {
-            if (local.length) return local;
-            throw new Error(`GitHub API ${response.status}`);
-        }
-
-        const comments = await response.json();
-        const remote = comments
-            .filter((comment) => comment.user?.type !== "Bot")
-            .flatMap((comment) => extractImageUrls(comment.body || ""));
-
-        if (remote.length) return remote;
+async function fetchIssueCommentImages(issueNumber) {
+    const response = await fetch(
+        `https://api.github.com/repos/${repository}/issues/${issueNumber}/comments?per_page=100`
+    );
+    if (!response.ok) {
+        throw new Error(`GitHub API ${response.status}`);
     }
 
-    return local;
+    const comments = await response.json();
+    return comments
+        .filter((comment) => comment.user?.type !== "Bot")
+        .flatMap((comment) => extractImageUrls(comment.body || ""));
+}
+
+async function resolveDiscussionImages(entry) {
+    if (entry.issue != null) {
+        try {
+            const remote = await fetchIssueCommentImages(entry.issue);
+            if (remote.length) return remote;
+        } catch (error) {
+            if (!hasLocalDiscussion(entry)) throw error;
+            console.warn(error);
+        }
+    }
+
+    return hasLocalDiscussion(entry) ? entry.discussion : [];
+}
+
+function renderDiscussionButton(key) {
+    return `<div class="entry-actions">
+        <button class="discussion-button" type="button" data-entry-key="${escapeHtml(key)}">讨论截图</button>
+    </div>`;
 }
 
 async function openDiscussion(entry) {
@@ -776,7 +791,7 @@ async function openDiscussion(entry) {
     try {
         const images = await resolveDiscussionImages(entry);
         if (!images.length) {
-            discussionGallery.innerHTML = '<p class="archive-empty">这条记忆还没有讨论截图。在对应 GitHub Issue 下评论贴图后即可显示。</p>';
+            discussionGallery.innerHTML = '<p class="archive-empty">这条记忆还没有讨论截图。</p>';
             return;
         }
 
@@ -808,13 +823,11 @@ function renderEntries(entries) {
         const note = entry.note
             ? `<p>备注：${escapeHtml(entry.note)}</p>`
             : "";
-        const canOpenDiscussion = entry.issue != null
-            || (Array.isArray(entry.discussion) && entry.discussion.length > 0);
-        const discussionAction = canOpenDiscussion
-            ? `<div class="entry-actions">
-                    <button class="discussion-button" type="button" data-entry-key="${escapeHtml(key)}">讨论截图</button>
-               </div>`
-            : "";
+        const discussionAction = hasLocalDiscussion(entry)
+            ? renderDiscussionButton(key)
+            : entry.issue != null
+                ? `<div class="entry-actions" data-discussion-slot="${escapeHtml(key)}" hidden></div>`
+                : "";
 
         return `
             <article class="entry${showYear ? "" : " entry-continued"}">
@@ -838,6 +851,29 @@ function renderEntries(entries) {
             </article>
         `;
     }).join("");
+
+    revealDiscussionButtons(entries);
+}
+
+async function revealDiscussionButtons(entries) {
+    const checks = entries.map(async (entry, index) => {
+        if (hasLocalDiscussion(entry) || entry.issue == null) return;
+
+        const key = entryKey(entry, index);
+        const slot = archiveRoot.querySelector(`[data-discussion-slot="${key}"]`);
+        if (!slot) return;
+
+        try {
+            const images = await fetchIssueCommentImages(entry.issue);
+            if (!images.length) return;
+            slot.innerHTML = `<button class="discussion-button" type="button" data-entry-key="${escapeHtml(key)}">讨论截图</button>`;
+            slot.hidden = false;
+        } catch (error) {
+            console.warn(error);
+        }
+    });
+
+    await Promise.all(checks);
 }
 
 archiveRoot.addEventListener("click", (event) => {
