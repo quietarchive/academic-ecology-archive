@@ -230,78 +230,13 @@ a:hover {
     padding-top: 4px;
 }
 
-.entry.entry-child {
-    grid-template-columns: 132px minmax(0, 1fr);
-    gap: 18px;
-    margin-bottom: 22px;
-    margin-left: 28px;
-}
-
-.entry.entry-child::before {
-    left: 10px;
-    top: 14px;
-    bottom: -28px;
-    width: 2px;
-    background: linear-gradient(rgba(240, 168, 74, 0.34), rgba(240, 168, 74, 0.08));
-}
-
-.entry.entry-child::after {
-    left: 4px;
-    top: 8px;
-    width: 14px;
-    height: 14px;
-    box-shadow:
-        0 0 0 6px rgba(240, 168, 74, 0.08),
-        0 0 16px rgba(240, 168, 74, 0.35);
-}
-
-.entry.entry-child .time-col {
-    min-height: 0;
-    padding-left: 36px;
-    padding-top: 2px;
-}
-
-.entry.entry-child .date {
-    min-width: 78px;
-    min-height: 30px;
-    padding: 5px 10px;
-    border-radius: 10px;
-    font-size: 13px;
-    box-shadow:
-        0 8px 16px rgba(240, 168, 74, 0.10),
-        inset 0 -2px 0 rgba(240, 168, 74, 0.08),
-        0 2px 0 rgba(4, 9, 18, 0.24);
-}
-
-.entry.entry-child .content {
-    padding-top: 0;
-    max-width: 600px;
-}
-
-.entry.entry-child .content h2 {
-    font-size: clamp(14px, 1.5vw, 16px);
-    line-height: 1.4;
-    color: rgba(243, 236, 217, 0.92);
-}
-
-.entry.entry-child .content p {
-    margin-top: 8px;
-    font-size: 13px;
-    line-height: 1.55;
-}
-
-.entry.entry-child .entry-actions {
-    margin-top: 10px;
-}
-
-.entry.entry-child .discussion-button {
-    min-height: 30px;
-    padding: 4px 10px;
-    font-size: 12px;
-}
-
 .event-group {
-    margin-bottom: 18px;
+    margin-bottom: 0;
+}
+
+.event-children {
+    margin: 0;
+    padding: 0;
 }
 
 .entry-actions {
@@ -311,7 +246,8 @@ a:hover {
     margin-top: 18px;
 }
 
-.discussion-button {
+.discussion-button,
+.followup-button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -326,9 +262,14 @@ a:hover {
     transition: background 160ms ease, border-color 160ms ease;
 }
 
-.discussion-button:hover {
+.discussion-button:hover,
+.followup-button:hover {
     border-color: var(--accent-strong);
     background: rgba(240, 168, 74, 0.20);
+}
+
+.followup-button[aria-expanded="true"] {
+    background: rgba(240, 168, 74, 0.22);
 }
 
 .discussion-dialog {
@@ -632,29 +573,6 @@ a:hover {
 
     .entry.entry-continued::after {
         top: 14px;
-    }
-
-    .entry.entry-child {
-        margin-left: 12px;
-        margin-bottom: 28px;
-        gap: 14px;
-    }
-
-    .entry.entry-child::before {
-        top: 22px;
-        bottom: -24px;
-    }
-
-    .entry.entry-child::after {
-        top: 10px;
-    }
-
-    .entry.entry-child .time-col {
-        padding-left: 36px;
-    }
-
-    .entry.entry-child .content {
-        padding: 0 0 0 36px;
     }
 
     .time-col {
@@ -977,9 +895,11 @@ async function resolveDiscussionImages(entry) {
 }
 
 function renderDiscussionButton(key) {
-    return `<div class="entry-actions">
-        <button class="discussion-button" type="button" data-entry-key="${escapeHtml(key)}">讨论截图</button>
-    </div>`;
+    return `<button class="discussion-button" type="button" data-entry-key="${escapeHtml(key)}">讨论截图</button>`;
+}
+
+function renderFollowupButton(groupId, count) {
+    return `<button class="followup-button" type="button" data-followup-for="${escapeHtml(groupId)}" aria-expanded="false">后续 ${count}</button>`;
 }
 
 async function openDiscussion(entry) {
@@ -1005,28 +925,32 @@ async function openDiscussion(entry) {
     }
 }
 
-function renderEntryArticle(entry, { isChild, showYear, index }) {
+function renderEntryArticle(entry, { showYear, index, extraActions = "" }) {
     const key = entryKey(entry, index);
     entriesById.set(key, entry);
     const { year, date } = formatDateParts(entry.date);
     const note = entry.note
         ? `<p>备注：${escapeHtml(entry.note)}</p>`
         : "";
-    const discussionAction = hasLocalDiscussion(entry)
-        ? renderDiscussionButton(key)
-        : entry.issue != null
-            ? `<div class="entry-actions" data-discussion-slot="${escapeHtml(key)}" hidden></div>`
-            : "";
-    const classes = [
-        "entry",
-        isChild ? "entry-child" : "",
-        !isChild && !showYear ? "entry-continued" : ""
-    ].filter(Boolean).join(" ");
+
+    const actionBits = [];
+    if (hasLocalDiscussion(entry)) {
+        actionBits.push(renderDiscussionButton(key));
+    } else if (entry.issue != null) {
+        actionBits.push(`<span data-discussion-slot="${escapeHtml(key)}" hidden></span>`);
+    }
+    if (extraActions) actionBits.push(extraActions);
+
+    const actions = actionBits.length
+        ? `<div class="entry-actions">${actionBits.join("")}</div>`
+        : "";
+
+    const classes = ["entry", !showYear ? "entry-continued" : ""].filter(Boolean).join(" ");
 
     return `
         <article class="${classes}">
             <div class="time-col">
-                ${!isChild && showYear ? `<div class="year">${escapeHtml(year)}</div>` : ""}
+                ${showYear ? `<div class="year">${escapeHtml(year)}</div>` : ""}
                 <div class="date">${escapeHtml(date)}</div>
             </div>
             <div class="content">
@@ -1040,7 +964,7 @@ function renderEntryArticle(entry, { isChild, showYear, index }) {
                     <a href="${escapeHtml(entry.archive)}" rel="noopener noreferrer" target="_blank">${escapeHtml(entry.archive)}</a>
                 </p>
                 ${note}
-                ${discussionAction}
+                ${actions}
             </div>
         </article>
     `;
@@ -1058,26 +982,34 @@ function renderEntries(entries) {
     let renderIndex = 0;
     const flatForDiscussion = [];
 
-    archiveRoot.innerHTML = groups.map(({ root, children }) => {
+    archiveRoot.innerHTML = groups.map(({ root, children }, groupIndex) => {
         const rootYear = formatDateParts(root.date).year;
         const showYear = rootYear !== previousYear;
         previousYear = rootYear;
+        const groupId = `group-${groupIndex}`;
+        const followup = children.length
+            ? renderFollowupButton(groupId, children.length)
+            : "";
         const rootHtml = renderEntryArticle(root, {
-            isChild: false,
             showYear,
-            index: renderIndex++
+            index: renderIndex++,
+            extraActions: followup
         });
         flatForDiscussion.push(root);
+
         const childrenHtml = children.map((child) => {
             flatForDiscussion.push(child);
             return renderEntryArticle(child, {
-                isChild: true,
                 showYear: false,
                 index: renderIndex++
             });
         }).join("");
 
-        return `<section class="event-group">${rootHtml}${childrenHtml}</section>`;
+        const childrenBlock = children.length
+            ? `<div class="event-children" id="${groupId}" hidden>${childrenHtml}</div>`
+            : "";
+
+        return `<section class="event-group">${rootHtml}${childrenBlock}</section>`;
     }).join("");
 
     revealDiscussionButtons(flatForDiscussion);
@@ -1094,8 +1026,7 @@ async function revealDiscussionButtons(entries) {
         try {
             const images = await fetchIssueCommentImages(entry.issue);
             if (!images.length) return;
-            slot.innerHTML = `<button class="discussion-button" type="button" data-entry-key="${escapeHtml(key)}">讨论截图</button>`;
-            slot.hidden = false;
+            slot.outerHTML = `<button class="discussion-button" type="button" data-entry-key="${escapeHtml(key)}">讨论截图</button>`;
         } catch (error) {
             console.warn(error);
         }
@@ -1105,6 +1036,19 @@ async function revealDiscussionButtons(entries) {
 }
 
 archiveRoot.addEventListener("click", (event) => {
+    const followupButton = event.target.closest(".followup-button");
+    if (followupButton) {
+        const panel = document.getElementById(followupButton.dataset.followupFor);
+        if (!panel) return;
+        const expanded = followupButton.getAttribute("aria-expanded") === "true";
+        const next = !expanded;
+        followupButton.setAttribute("aria-expanded", String(next));
+        panel.hidden = !next;
+        const count = panel.querySelectorAll("article.entry").length;
+        followupButton.textContent = next ? `收起 ${count}` : `后续 ${count}`;
+        return;
+    }
+
     const button = event.target.closest(".discussion-button");
     if (!button) return;
     const entry = entriesById.get(button.dataset.entryKey);
