@@ -234,11 +234,6 @@ a:hover {
     margin-bottom: 0;
 }
 
-.event-children {
-    margin: 0;
-    padding: 0;
-}
-
 .entry-actions {
     display: flex;
     flex-wrap: wrap;
@@ -268,11 +263,8 @@ a:hover {
     background: rgba(240, 168, 74, 0.20);
 }
 
-.followup-button[aria-expanded="true"] {
-    background: rgba(240, 168, 74, 0.22);
-}
-
-.discussion-dialog {
+.discussion-dialog,
+.followup-dialog {
     width: min(760px, calc(100vw - 32px));
     max-height: calc(100vh - 32px);
     padding: 0;
@@ -283,28 +275,83 @@ a:hover {
     box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
 }
 
-.discussion-dialog::backdrop {
+.followup-dialog {
+    width: min(860px, calc(100vw - 32px));
+}
+
+.discussion-dialog::backdrop,
+.followup-dialog::backdrop {
     background: rgba(3, 8, 16, 0.76);
     backdrop-filter: blur(5px);
 }
 
-.discussion-panel {
+.discussion-panel,
+.followup-panel {
     display: flex;
     flex-direction: column;
     max-height: calc(100vh - 32px);
 }
 
-.discussion-panel .dialog-header {
+.discussion-panel .dialog-header,
+.followup-panel .dialog-header {
     margin: 0;
     padding: 20px 22px 14px;
     border-bottom: 1px solid rgba(240, 168, 74, 0.18);
 }
 
-.discussion-gallery {
+.discussion-gallery,
+.followup-list {
     display: grid;
     gap: 16px;
     padding: 18px 22px 24px;
     overflow: auto;
+}
+
+.followup-list {
+    gap: 0;
+}
+
+.followup-list .entry {
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 20px;
+    margin-bottom: 42px;
+}
+
+.followup-list .entry::before {
+    left: 8px;
+    top: 18px;
+    bottom: -48px;
+}
+
+.followup-list .entry::after {
+    left: 1px;
+    top: 8px;
+    width: 16px;
+    height: 16px;
+}
+
+.followup-list .entry.entry-continued::before {
+    top: 14px;
+}
+
+.followup-list .entry.entry-continued::after {
+    top: 6px;
+}
+
+.followup-list .time-col {
+    min-height: 0;
+    padding-left: 36px;
+    padding-top: 0;
+}
+
+.followup-list .year {
+    margin: 0 0 12px;
+    font-size: 28px;
+}
+
+.followup-list .content {
+    padding-top: 0;
+    max-width: none;
 }
 
 .discussion-gallery figure {
@@ -650,6 +697,16 @@ a:hover {
     </div>
 </dialog>
 
+<dialog class="followup-dialog" id="followupDialog">
+    <div class="followup-panel">
+        <div class="dialog-header">
+            <h2 id="followupTitle">后续报道</h2>
+            <button class="close-button" id="closeFollowup" type="button" aria-label="关闭">&times;</button>
+        </div>
+        <div class="followup-list" id="followupList"></div>
+    </div>
+</dialog>
+
 <dialog class="memory-dialog" id="memoryDialog">
     <form class="memory-form" id="memoryForm">
         <div class="dialog-header">
@@ -716,6 +773,9 @@ const dialog = document.getElementById("memoryDialog");
 const discussionDialog = document.getElementById("discussionDialog");
 const discussionTitle = document.getElementById("discussionTitle");
 const discussionGallery = document.getElementById("discussionGallery");
+const followupDialog = document.getElementById("followupDialog");
+const followupTitle = document.getElementById("followupTitle");
+const followupList = document.getElementById("followupList");
 const form = document.getElementById("memoryForm");
 const dateInput = document.getElementById("memoryDate");
 const sourceInput = document.getElementById("sourceUrl");
@@ -733,6 +793,8 @@ const wechatArchiveHint = "检测到微信链接：Wayback 通常只能存到验
 let titleFetchToken = 0;
 let entriesById = new Map();
 let rootEntries = [];
+let followupsByGroup = new Map();
+let followupRenderIndex = 1000;
 
 function escapeHtml(value) {
     return String(value)
@@ -898,8 +960,29 @@ function renderDiscussionButton(key) {
     return `<button class="discussion-button" type="button" data-entry-key="${escapeHtml(key)}">讨论截图</button>`;
 }
 
-function renderFollowupButton(groupId, count) {
-    return `<button class="followup-button" type="button" data-followup-for="${escapeHtml(groupId)}" aria-expanded="false">后续 ${count}</button>`;
+function renderFollowupButton(groupId, count, rootKey) {
+    return `<button class="followup-button" type="button" data-followup-for="${escapeHtml(groupId)}" data-root-key="${escapeHtml(rootKey)}">后续 ${count}</button>`;
+}
+
+function openFollowups(groupId, rootEntry) {
+    const children = followupsByGroup.get(groupId) || [];
+    followupTitle.textContent = rootEntry?.title
+        ? `后续报道 · ${rootEntry.title}`.slice(0, 42)
+        : "后续报道";
+
+    let previousYear = "";
+    followupList.innerHTML = children.map((child, index) => {
+        const year = formatDateParts(child.date).year;
+        const showYear = year !== previousYear;
+        previousYear = year;
+        return renderEntryArticle(child, {
+            showYear,
+            index: followupRenderIndex + index
+        });
+    }).join("");
+
+    followupDialog.showModal();
+    revealDiscussionButtons(children, followupList);
 }
 
 async function openDiscussion(entry) {
@@ -977,50 +1060,42 @@ function renderEntries(entries) {
     }
 
     entriesById = new Map();
+    followupsByGroup = new Map();
     const groups = buildEventGroups(entries);
     let previousYear = "";
     let renderIndex = 0;
-    const flatForDiscussion = [];
+    const rootsForDiscussion = [];
 
     archiveRoot.innerHTML = groups.map(({ root, children }, groupIndex) => {
         const rootYear = formatDateParts(root.date).year;
         const showYear = rootYear !== previousYear;
         previousYear = rootYear;
         const groupId = `group-${groupIndex}`;
+        const rootKey = entryKey(root, renderIndex);
+        if (children.length) {
+            followupsByGroup.set(groupId, children);
+        }
         const followup = children.length
-            ? renderFollowupButton(groupId, children.length)
+            ? renderFollowupButton(groupId, children.length, rootKey)
             : "";
         const rootHtml = renderEntryArticle(root, {
             showYear,
             index: renderIndex++,
             extraActions: followup
         });
-        flatForDiscussion.push(root);
-
-        const childrenHtml = children.map((child) => {
-            flatForDiscussion.push(child);
-            return renderEntryArticle(child, {
-                showYear: false,
-                index: renderIndex++
-            });
-        }).join("");
-
-        const childrenBlock = children.length
-            ? `<div class="event-children" id="${groupId}" hidden>${childrenHtml}</div>`
-            : "";
-
-        return `<section class="event-group">${rootHtml}${childrenBlock}</section>`;
+        rootsForDiscussion.push(root);
+        return `<section class="event-group">${rootHtml}</section>`;
     }).join("");
 
-    revealDiscussionButtons(flatForDiscussion);
+    revealDiscussionButtons(rootsForDiscussion, archiveRoot);
 }
 
-async function revealDiscussionButtons(entries) {
-    const checks = entries.map(async (entry, index) => {
+async function revealDiscussionButtons(entries, rootEl = document) {
+    const checks = entries.map(async (entry) => {
         if (hasLocalDiscussion(entry) || entry.issue == null) return;
 
-        const key = entryKey(entry, index);
-        const slot = archiveRoot.querySelector(`[data-discussion-slot="${key}"]`);
+        const key = entryKey(entry, 0);
+        const slot = rootEl.querySelector(`[data-discussion-slot="${key}"]`);
         if (!slot) return;
 
         try {
@@ -1035,17 +1110,12 @@ async function revealDiscussionButtons(entries) {
     await Promise.all(checks);
 }
 
-archiveRoot.addEventListener("click", (event) => {
+function onArchiveClick(event) {
     const followupButton = event.target.closest(".followup-button");
     if (followupButton) {
-        const panel = document.getElementById(followupButton.dataset.followupFor);
-        if (!panel) return;
-        const expanded = followupButton.getAttribute("aria-expanded") === "true";
-        const next = !expanded;
-        followupButton.setAttribute("aria-expanded", String(next));
-        panel.hidden = !next;
-        const count = panel.querySelectorAll("article.entry").length;
-        followupButton.textContent = next ? `收起 ${count}` : `后续 ${count}`;
+        const groupId = followupButton.dataset.followupFor;
+        const rootEntry = entriesById.get(followupButton.dataset.rootKey);
+        openFollowups(groupId, rootEntry);
         return;
     }
 
@@ -1053,15 +1123,28 @@ archiveRoot.addEventListener("click", (event) => {
     if (!button) return;
     const entry = entriesById.get(button.dataset.entryKey);
     if (entry) openDiscussion(entry);
-});
+}
+
+archiveRoot.addEventListener("click", onArchiveClick);
+followupList.addEventListener("click", onArchiveClick);
 
 document.getElementById("closeDiscussion").addEventListener("click", () => {
     discussionDialog.close();
 });
 
+document.getElementById("closeFollowup").addEventListener("click", () => {
+    followupDialog.close();
+});
+
 discussionDialog.addEventListener("click", (event) => {
     if (event.target === discussionDialog) {
         discussionDialog.close();
+    }
+});
+
+followupDialog.addEventListener("click", (event) => {
+    if (event.target === followupDialog) {
+        followupDialog.close();
     }
 });
 
