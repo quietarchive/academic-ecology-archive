@@ -34,7 +34,8 @@
         "media/issue-4/09.png",
         "media/issue-4/10.png",
         "media/issue-4/11.png"
-      ]
+      ],
+      "figure": "惠子萱"
     },
     {
       "issue": 3,
@@ -82,7 +83,8 @@
       "labels": [
         "公开文章",
         "讨论记录"
-      ]
+      ],
+      "figure": "王学典"
     }
   ]
 }

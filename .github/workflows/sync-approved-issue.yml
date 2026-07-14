@@ -56,6 +56,10 @@ jobs:
               /[-*]\s*父事件[：:]\s*(.+)/,
               /###\s*归属事件\s*\n+([^\n#]+)/
             ]);
+            const figureRaw = field([
+              /[-*]\s*主旨人物[：:]\s*(.+)/,
+              /###\s*主旨人物\s*\n+([^\n#]+)/
+            ]);
             let note = field([
               /##\s*补充说明\s*\n+([\s\S]*?)(?=\n##\s|$)/,
               /###\s*说明\s*\n+([\s\S]*?)(?=\n###\s|$)/
@@ -71,6 +75,11 @@ jobs:
               } else {
                 parent = parentRaw.trim();
               }
+            }
+
+            let figure = '';
+            if (figureRaw && !/^(无|没有|null|-)$/i.test(figureRaw)) {
+              figure = figureRaw.trim();
             }
 
             if (!date || !title || !source || !archive) {
@@ -113,6 +122,10 @@ jobs:
               entry.parent = parent;
             }
 
+            if (figure) {
+              entry.figure = figure;
+            }
+
             if (existing >= 0) {
               const previous = data.entries[existing];
               if (Array.isArray(previous.discussion) && previous.discussion.length) {
@@ -120,6 +133,9 @@ jobs:
               }
               if (previous.id) {
                 entry.id = previous.id;
+              }
+              if (!entry.figure && previous.figure) {
+                entry.figure = previous.figure;
               }
               data.entries[existing] = entry;
             } else {

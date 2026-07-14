@@ -239,6 +239,21 @@ a:hover {
     flex-wrap: wrap;
     gap: 10px;
     margin-top: 18px;
+    align-items: center;
+}
+
+.figure-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 6px 14px;
+    border: 1px solid rgba(240, 168, 74, 0.55);
+    border-radius: 6px;
+    color: var(--accent);
+    background: rgba(240, 168, 74, 0.10);
+    font-size: 14px;
+    line-height: 1;
 }
 
 .discussion-button,
@@ -690,7 +705,7 @@ a:hover {
 <dialog class="discussion-dialog" id="discussionDialog">
     <div class="discussion-panel">
         <div class="dialog-header">
-            <h2 id="discussionTitle">讨论截图</h2>
+            <h2 id="discussionTitle">评论截图</h2>
             <button class="close-button" id="closeDiscussion" type="button" aria-label="关闭">&times;</button>
         </div>
         <div class="discussion-gallery" id="discussionGallery"></div>
@@ -747,6 +762,12 @@ a:hover {
                     <option value="">新建独立事件（作为根节点）</option>
                 </select>
                 <p class="field-hint">若这是已有事件的后续报道，请选择源头文章；不选则新建事件。</p>
+            </div>
+
+            <div class="field">
+                <label for="memoryFigure">主旨人物（根事件）</label>
+                <input id="memoryFigure" name="figure" type="text" maxlength="40" placeholder="如：王学典">
+                <p class="field-hint">仅新建根事件时需要；后续报道可留空。</p>
             </div>
 
             <div class="field field-wide">
@@ -957,11 +978,16 @@ async function resolveDiscussionImages(entry) {
 }
 
 function renderDiscussionButton(key) {
-    return `<button class="discussion-button" type="button" data-entry-key="${escapeHtml(key)}">讨论截图</button>`;
+    return `<button class="discussion-button" type="button" data-entry-key="${escapeHtml(key)}">评论截图</button>`;
 }
 
 function renderFollowupButton(groupId, count, rootKey) {
-    return `<button class="followup-button" type="button" data-followup-for="${escapeHtml(groupId)}" data-root-key="${escapeHtml(rootKey)}">后续 ${count}</button>`;
+    return `<button class="followup-button" type="button" data-followup-for="${escapeHtml(groupId)}" data-root-key="${escapeHtml(rootKey)}">后续报道 ${count}</button>`;
+}
+
+function renderFigureTag(figure) {
+    if (!figure) return "";
+    return `<span class="figure-tag">${escapeHtml(figure)}</span>`;
 }
 
 function openFollowups(groupId, rootEntry) {
@@ -986,20 +1012,20 @@ function openFollowups(groupId, rootEntry) {
 }
 
 async function openDiscussion(entry) {
-    discussionTitle.textContent = "讨论截图";
+    discussionTitle.textContent = "评论截图";
     discussionGallery.innerHTML = '<p class="archive-loading">正在加载截图…</p>';
     discussionDialog.showModal();
 
     try {
         const images = await resolveDiscussionImages(entry);
         if (!images.length) {
-            discussionGallery.innerHTML = '<p class="archive-empty">这条记忆还没有讨论截图。</p>';
+            discussionGallery.innerHTML = '<p class="archive-empty">这条记忆还没有评论截图。</p>';
             return;
         }
 
         discussionGallery.innerHTML = images.map((src, index) => `
             <figure>
-                <img src="${escapeHtml(toImageSrc(src))}" alt="讨论截图 ${index + 1}" loading="lazy">
+                <img src="${escapeHtml(toImageSrc(src))}" alt="评论截图 ${index + 1}" loading="lazy">
             </figure>
         `).join("");
     } catch (error) {
@@ -1008,7 +1034,7 @@ async function openDiscussion(entry) {
     }
 }
 
-function renderEntryArticle(entry, { showYear, index, extraActions = "" }) {
+function renderEntryArticle(entry, { showYear, index, extraActions = "", showFigure = false }) {
     const key = entryKey(entry, index);
     entriesById.set(key, entry);
     const { year, date } = formatDateParts(entry.date);
@@ -1017,12 +1043,15 @@ function renderEntryArticle(entry, { showYear, index, extraActions = "" }) {
         : "";
 
     const actionBits = [];
+    if (showFigure && entry.figure) {
+        actionBits.push(renderFigureTag(entry.figure));
+    }
+    if (extraActions) actionBits.push(extraActions);
     if (hasLocalDiscussion(entry)) {
         actionBits.push(renderDiscussionButton(key));
     } else if (entry.issue != null) {
         actionBits.push(`<span data-discussion-slot="${escapeHtml(key)}" hidden></span>`);
     }
-    if (extraActions) actionBits.push(extraActions);
 
     const actions = actionBits.length
         ? `<div class="entry-actions">${actionBits.join("")}</div>`
@@ -1081,7 +1110,8 @@ function renderEntries(entries) {
         const rootHtml = renderEntryArticle(root, {
             showYear,
             index: renderIndex++,
-            extraActions: followup
+            extraActions: followup,
+            showFigure: true
         });
         rootsForDiscussion.push(root);
         return `<section class="event-group">${rootHtml}</section>`;
@@ -1101,7 +1131,7 @@ async function revealDiscussionButtons(entries, rootEl = document) {
         try {
             const images = await fetchIssueCommentImages(entry.issue);
             if (!images.length) return;
-            slot.outerHTML = `<button class="discussion-button" type="button" data-entry-key="${escapeHtml(key)}">讨论截图</button>`;
+            slot.outerHTML = `<button class="discussion-button" type="button" data-entry-key="${escapeHtml(key)}">评论截图</button>`;
         } catch (error) {
             console.warn(error);
         }
@@ -1301,6 +1331,7 @@ form.addEventListener("submit", (event) => {
     const source = data.get("source").trim();
     const archive = data.get("archive").trim();
     const parent = String(data.get("parent") || "").trim();
+    const figure = String(data.get("figure") || "").trim();
     const note = data.get("note").trim() || "无";
     const issueTitle = `[记忆提交] ${date} ${title}`;
     const issueBody = [
@@ -1311,6 +1342,7 @@ form.addEventListener("submit", (event) => {
         `- 来源链接：${source}`,
         `- 第三方存档：${archive}`,
         `- 父事件：${parent || "无"}`,
+        `- 主旨人物：${figure || "无"}`,
         "",
         "## 补充说明",
         "",
@@ -1325,7 +1357,7 @@ form.addEventListener("submit", (event) => {
 });
 
 loadEntries();
-</script>>
+</script>
 </body>
 
 </html>

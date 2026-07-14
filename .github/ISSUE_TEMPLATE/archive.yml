@@ -51,6 +51,14 @@ body:
       placeholder: 4
 
 
+  - type: input
+    id: figure
+    attributes:
+      label: 主旨人物
+      description: 根事件的争议人物姓名；后续报道可留空
+      placeholder: 王学典
+
+
   - type: textarea
     id: description
     attributes:
