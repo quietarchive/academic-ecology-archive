@@ -43,6 +43,14 @@ body:
       required: true
 
 
+  - type: input
+    id: parent
+    attributes:
+      label: 归属事件
+      description: 若为后续报道，填写源头文章的 Issue 编号（如 4）；独立事件留空
+      placeholder: 4
+
+
   - type: textarea
     id: description
     attributes:

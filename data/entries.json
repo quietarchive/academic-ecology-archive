@@ -9,7 +9,8 @@
       "note": "",
       "labels": [
         "公开资料"
-      ]
+      ],
+      "parent": 4
     },
     {
       "issue": 4,
@@ -70,6 +71,7 @@
     },
     {
       "issue": null,
+      "id": "seed-2026-07-10",
       "date": "2026-07-10",
       "title": "王学典《中华读书报》刊文引发争议",
       "source": "https://mp.weixin.qq.com/s/6cekk0UkHET0pavmQn8Xew",

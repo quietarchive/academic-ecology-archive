@@ -230,6 +230,80 @@ a:hover {
     padding-top: 4px;
 }
 
+.entry.entry-child {
+    grid-template-columns: 132px minmax(0, 1fr);
+    gap: 18px;
+    margin-bottom: 22px;
+    margin-left: 28px;
+}
+
+.entry.entry-child::before {
+    left: 10px;
+    top: 14px;
+    bottom: -28px;
+    width: 2px;
+    background: linear-gradient(rgba(240, 168, 74, 0.34), rgba(240, 168, 74, 0.08));
+}
+
+.entry.entry-child::after {
+    left: 4px;
+    top: 8px;
+    width: 14px;
+    height: 14px;
+    box-shadow:
+        0 0 0 6px rgba(240, 168, 74, 0.08),
+        0 0 16px rgba(240, 168, 74, 0.35);
+}
+
+.entry.entry-child .time-col {
+    min-height: 0;
+    padding-left: 36px;
+    padding-top: 2px;
+}
+
+.entry.entry-child .date {
+    min-width: 78px;
+    min-height: 30px;
+    padding: 5px 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    box-shadow:
+        0 8px 16px rgba(240, 168, 74, 0.10),
+        inset 0 -2px 0 rgba(240, 168, 74, 0.08),
+        0 2px 0 rgba(4, 9, 18, 0.24);
+}
+
+.entry.entry-child .content {
+    padding-top: 0;
+    max-width: 600px;
+}
+
+.entry.entry-child .content h2 {
+    font-size: clamp(14px, 1.5vw, 16px);
+    line-height: 1.4;
+    color: rgba(243, 236, 217, 0.92);
+}
+
+.entry.entry-child .content p {
+    margin-top: 8px;
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.entry.entry-child .entry-actions {
+    margin-top: 10px;
+}
+
+.entry.entry-child .discussion-button {
+    min-height: 30px;
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+.event-group {
+    margin-bottom: 18px;
+}
+
 .entry-actions {
     display: flex;
     flex-wrap: wrap;
@@ -381,7 +455,8 @@ a:hover {
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.field select {
     width: 100%;
     border: 1px solid rgba(240, 168, 74, 0.30);
     border-radius: 6px;
@@ -396,6 +471,12 @@ a:hover {
     padding: 0 13px;
 }
 
+.field select {
+    height: 46px;
+    padding: 0 10px;
+    font: inherit;
+}
+
 .field textarea {
     min-height: 100px;
     padding: 11px 13px;
@@ -403,7 +484,8 @@ a:hover {
 }
 
 .field input:focus,
-.field textarea:focus {
+.field textarea:focus,
+.field select:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 3px rgba(240, 168, 74, 0.14);
 }
@@ -552,6 +634,29 @@ a:hover {
         top: 14px;
     }
 
+    .entry.entry-child {
+        margin-left: 12px;
+        margin-bottom: 28px;
+        gap: 14px;
+    }
+
+    .entry.entry-child::before {
+        top: 22px;
+        bottom: -24px;
+    }
+
+    .entry.entry-child::after {
+        top: 10px;
+    }
+
+    .entry.entry-child .time-col {
+        padding-left: 36px;
+    }
+
+    .entry.entry-child .content {
+        padding: 0 0 0 36px;
+    }
+
     .time-col {
         padding-left: 42px;
     }
@@ -662,6 +767,14 @@ a:hover {
             </div>
 
             <div class="field field-wide">
+                <label for="parentEvent">归属事件（选填）</label>
+                <select id="parentEvent" name="parent">
+                    <option value="">新建独立事件（作为根节点）</option>
+                </select>
+                <p class="field-hint">若这是已有事件的后续报道，请选择源头文章；不选则新建事件。</p>
+            </div>
+
+            <div class="field field-wide">
                 <label for="archiveUrl">第三方存档链接</label>
                 <input id="archiveUrl" name="archive" type="url" inputmode="url" placeholder="https://web.archive.org/web/... 或 https://archive.ph/..." required>
             </div>
@@ -694,12 +807,14 @@ const createArchiveWaybackButton = document.getElementById("createArchiveWayback
 const createArchivePhButton = document.getElementById("createArchivePh");
 const archiveHint = document.getElementById("archiveHint");
 const fetchTitleButton = document.getElementById("fetchTitle");
+const parentEventSelect = document.getElementById("parentEvent");
 
 const defaultArchiveHint = "优先用互联网档案馆（Wayback）；微信文章常被拦截，请改用 archive.ph。保存后把可用的永久链接粘贴到下方。";
 const wechatArchiveHint = "检测到微信链接：Wayback 通常只能存到验证页。请优先用 archive.ph 存档，再把永久链接粘贴到下方。";
 
 let titleFetchToken = 0;
 let entriesById = new Map();
+let rootEntries = [];
 
 function escapeHtml(value) {
     return String(value)
@@ -718,8 +833,92 @@ function formatDateParts(isoDate) {
     };
 }
 
+function entryIdentity(entry) {
+    if (entry.issue != null) return entry.issue;
+    if (entry.id) return entry.id;
+    return null;
+}
+
 function entryKey(entry, index) {
-    return entry.issue != null ? `issue-${entry.issue}` : `entry-${index}`;
+    const identity = entryIdentity(entry);
+    if (identity != null) return `entry-${identity}`;
+    return `entry-${index}`;
+}
+
+function parentOf(entry) {
+    return entry.parent == null || entry.parent === "" ? null : entry.parent;
+}
+
+function isRootEntry(entry) {
+    return parentOf(entry) == null;
+}
+
+function compareDateAsc(a, b) {
+    if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+    return (a.issue || 0) - (b.issue || 0);
+}
+
+function compareDateDesc(a, b) {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    return (b.issue || 0) - (a.issue || 0);
+}
+
+function buildEventGroups(entries) {
+    const roots = entries.filter(isRootEntry).sort(compareDateDesc);
+    const childrenByParent = new Map();
+
+    for (const entry of entries) {
+        const parent = parentOf(entry);
+        if (parent == null) continue;
+        if (!childrenByParent.has(parent)) childrenByParent.set(parent, []);
+        childrenByParent.get(parent).push(entry);
+    }
+
+    for (const kids of childrenByParent.values()) {
+        kids.sort(compareDateAsc);
+    }
+
+    const knownParents = new Set(roots.map(entryIdentity).filter((value) => value != null));
+    const orphanRoots = [];
+
+    for (const [parent, kids] of [...childrenByParent.entries()]) {
+        if (!knownParents.has(parent)) {
+            orphanRoots.push(...kids);
+            childrenByParent.delete(parent);
+        }
+    }
+
+    const groups = roots.map((root) => ({
+        root,
+        children: childrenByParent.get(entryIdentity(root)) || []
+    }));
+
+    for (const orphan of orphanRoots.sort(compareDateDesc)) {
+        groups.push({ root: orphan, children: [] });
+    }
+
+    return groups;
+}
+
+function populateParentOptions(entries) {
+    rootEntries = entries.filter(isRootEntry).sort(compareDateDesc);
+    const previous = parentEventSelect.value;
+    parentEventSelect.innerHTML = '<option value="">新建独立事件（作为根节点）</option>';
+
+    for (const root of rootEntries) {
+        const identity = entryIdentity(root);
+        if (identity == null) continue;
+        const prefix = typeof identity === "number" ? `#${identity}` : String(identity);
+        const label = `${prefix} · ${root.date} · ${root.title}`.slice(0, 80);
+        const option = document.createElement("option");
+        option.value = String(identity);
+        option.textContent = label;
+        parentEventSelect.appendChild(option);
+    }
+
+    if ([...parentEventSelect.options].some((option) => option.value === previous)) {
+        parentEventSelect.value = previous;
+    }
 }
 
 function extractImageUrls(markdownOrHtml) {
@@ -806,6 +1005,47 @@ async function openDiscussion(entry) {
     }
 }
 
+function renderEntryArticle(entry, { isChild, showYear, index }) {
+    const key = entryKey(entry, index);
+    entriesById.set(key, entry);
+    const { year, date } = formatDateParts(entry.date);
+    const note = entry.note
+        ? `<p>备注：${escapeHtml(entry.note)}</p>`
+        : "";
+    const discussionAction = hasLocalDiscussion(entry)
+        ? renderDiscussionButton(key)
+        : entry.issue != null
+            ? `<div class="entry-actions" data-discussion-slot="${escapeHtml(key)}" hidden></div>`
+            : "";
+    const classes = [
+        "entry",
+        isChild ? "entry-child" : "",
+        !isChild && !showYear ? "entry-continued" : ""
+    ].filter(Boolean).join(" ");
+
+    return `
+        <article class="${classes}">
+            <div class="time-col">
+                ${!isChild && showYear ? `<div class="year">${escapeHtml(year)}</div>` : ""}
+                <div class="date">${escapeHtml(date)}</div>
+            </div>
+            <div class="content">
+                <h2>${escapeHtml(entry.title)}</h2>
+                <p>
+                    来源：
+                    <a href="${escapeHtml(entry.source)}" rel="noopener noreferrer" target="_blank">${escapeHtml(entry.source)}</a>
+                </p>
+                <p>
+                    第三方存档：
+                    <a href="${escapeHtml(entry.archive)}" rel="noopener noreferrer" target="_blank">${escapeHtml(entry.archive)}</a>
+                </p>
+                ${note}
+                ${discussionAction}
+            </div>
+        </article>
+    `;
+}
+
 function renderEntries(entries) {
     if (!entries.length) {
         archiveRoot.innerHTML = '<p class="archive-empty">暂无档案条目。</p>';
@@ -813,46 +1053,34 @@ function renderEntries(entries) {
     }
 
     entriesById = new Map();
+    const groups = buildEventGroups(entries);
     let previousYear = "";
-    archiveRoot.innerHTML = entries.map((entry, index) => {
-        const key = entryKey(entry, index);
-        entriesById.set(key, entry);
-        const { year, date } = formatDateParts(entry.date);
-        const showYear = year !== previousYear;
-        previousYear = year;
-        const note = entry.note
-            ? `<p>备注：${escapeHtml(entry.note)}</p>`
-            : "";
-        const discussionAction = hasLocalDiscussion(entry)
-            ? renderDiscussionButton(key)
-            : entry.issue != null
-                ? `<div class="entry-actions" data-discussion-slot="${escapeHtml(key)}" hidden></div>`
-                : "";
+    let renderIndex = 0;
+    const flatForDiscussion = [];
 
-        return `
-            <article class="entry${showYear ? "" : " entry-continued"}">
-                <div class="time-col">
-                    ${showYear ? `<div class="year">${escapeHtml(year)}</div>` : ""}
-                    <div class="date">${escapeHtml(date)}</div>
-                </div>
-                <div class="content">
-                    <h2>${escapeHtml(entry.title)}</h2>
-                    <p>
-                        来源：
-                        <a href="${escapeHtml(entry.source)}" rel="noopener noreferrer" target="_blank">${escapeHtml(entry.source)}</a>
-                    </p>
-                    <p>
-                        第三方存档：
-                        <a href="${escapeHtml(entry.archive)}" rel="noopener noreferrer" target="_blank">${escapeHtml(entry.archive)}</a>
-                    </p>
-                    ${note}
-                    ${discussionAction}
-                </div>
-            </article>
-        `;
+    archiveRoot.innerHTML = groups.map(({ root, children }) => {
+        const rootYear = formatDateParts(root.date).year;
+        const showYear = rootYear !== previousYear;
+        previousYear = rootYear;
+        const rootHtml = renderEntryArticle(root, {
+            isChild: false,
+            showYear,
+            index: renderIndex++
+        });
+        flatForDiscussion.push(root);
+        const childrenHtml = children.map((child) => {
+            flatForDiscussion.push(child);
+            return renderEntryArticle(child, {
+                isChild: true,
+                showYear: false,
+                index: renderIndex++
+            });
+        }).join("");
+
+        return `<section class="event-group">${rootHtml}${childrenHtml}</section>`;
     }).join("");
 
-    revealDiscussionButtons(entries);
+    revealDiscussionButtons(flatForDiscussion);
 }
 
 async function revealDiscussionButtons(entries) {
@@ -901,10 +1129,7 @@ async function loadEntries() {
         }
         const data = await response.json();
         const entries = Array.isArray(data.entries) ? data.entries : [];
-        entries.sort((a, b) => {
-            if (a.date === b.date) return (b.issue || 0) - (a.issue || 0);
-            return a.date < b.date ? 1 : -1;
-        });
+        populateParentOptions(entries);
         renderEntries(entries);
     } catch (error) {
         archiveRoot.innerHTML = '<p class="archive-error">档案加载失败，请稍后刷新。</p>';
@@ -1048,6 +1273,7 @@ form.addEventListener("submit", (event) => {
     const date = data.get("date");
     const source = data.get("source").trim();
     const archive = data.get("archive").trim();
+    const parent = String(data.get("parent") || "").trim();
     const note = data.get("note").trim() || "无";
     const issueTitle = `[记忆提交] ${date} ${title}`;
     const issueBody = [
@@ -1057,6 +1283,7 @@ form.addEventListener("submit", (event) => {
         `- 标题：${title}`,
         `- 来源链接：${source}`,
         `- 第三方存档：${archive}`,
+        `- 父事件：${parent || "无"}`,
         "",
         "## 补充说明",
         "",
@@ -1071,7 +1298,7 @@ form.addEventListener("submit", (event) => {
 });
 
 loadEntries();
-</script>
+</script>>
 </body>
 
 </html>
