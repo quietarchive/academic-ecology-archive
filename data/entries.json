@@ -1,6 +1,18 @@
 {
   "entries": [
     {
+      "issue": 9,
+      "date": "2026-07-15",
+      "title": "白眉赤眼說瞎話：白眉神小考",
+      "source": "https://mp.weixin.qq.com/s/bRq7SwonCQRXASrbNSzIIA",
+      "archive": "https://archive.ph/leIww",
+      "note": "辛德勇的发言。说落井下石也不对，总之就是文人相轻，学者之间的口水仗。对他们不了解。白眉肯定不对，但辛呢？",
+      "labels": [
+        "公开资料"
+      ],
+      "parent": "seed-2026-07-10"
+    },
+    {
       "issue": 8,
       "date": "2026-07-13",
       "title": "天临七年，方舟元年：被指5000字抄袭、12个假注释，人大最终撤销学位",
